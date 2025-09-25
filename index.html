@@ -153,7 +153,7 @@
 
   <script>
     // ==== KONFIG FRONTEND ====
-    const API = 'https://script.google.com/macros/s/AKfycbyTbExkKCWQEXvVDKiFrO6CV4vYwEsAWw5zQNVobV_DyZDTm-IS3sKHqxDzYaHJRu20/exec'; // ← GANTI: URL Web App GAS (akhiran /exec)
+    const API = 'https://script.google.com/macros/s/AKfycbyTbExkKCWQEXvVDKiFrO6CV4vYwEsAWw5zQNVobV_DyZDTm-IS3sKHqxDzYaHJRu20/exec'; // URL Web App GAS (akhiran /exec)
 
     // ==== STATE ====
     let TOKEN = localStorage.getItem('cis_tok') || null;
@@ -171,7 +171,7 @@
     let touchStartX = 0;
 
     // INIT
-    (async function(){
+    (async function init(){
       if (TOKEN) {
         const ok = await fetchJSON(`${API}?action=root&token=${encodeURIComponent(TOKEN)}`);
         if (ok && !ok.error) { startApp(ok); return; }
@@ -183,25 +183,48 @@
     // === Helpers ===
     function $(id){ return document.getElementById(id); }
     function escapeHtml(s){ return String(s).replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+    function escapeAttr(s){ return String(s).replace(/'/g,"\\'").replace(/"/g,'&quot;'); } // untuk atribut JS
     function humanSize(n){ const u=['B','KB','MB','GB','TB']; let i=0,v=Number(n||0); while(v>=1024&&i<u.length-1){v/=1024;i++;} return v?`${v.toFixed(1)} ${u[i]}`:'-'; }
-    async function fetchJSON(url){ const r = await fetch(url,{method:'GET'}); return r.ok ? r.json() : null; }
+
+    // Versi defensif: parse text → JSON, log bila bukan JSON
+    async function fetchJSON(url){
+      try {
+        const r = await fetch(url,{method:'GET'});
+        const txt = await r.text();
+        try { return JSON.parse(txt); }
+        catch(e){ console.error('GET non-JSON:', txt.slice(0,300)); return null; }
+      } catch (e) {
+        console.error('fetchJSON error:', e); return null;
+      }
+    }
     async function postJSON(data){
-      // gunakan text/plain supaya TIDAK preflight
-      const r = await fetch(API, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify(data) });
-      return r.ok ? r.json() : null;
+      try {
+        const r = await fetch(API, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify(data) });
+        const txt = await r.text();
+        try { return JSON.parse(txt); }
+        catch(e){ console.error('POST non-JSON:', txt.slice(0,300)); return { ok:false, message:'API_NOT_JSON' }; }
+      } catch (e) {
+        console.error('postJSON error:', e); return { ok:false, message:'NETWORK_ERROR' };
+      }
     }
 
     // === Auth ===
     async function doLogin(){
       const pwd = $('pwd').value.trim();
-      $('logmsg').textContent = 'Memeriksa…';
+      const msg = $('logmsg');
+      msg.textContent = 'Memeriksa…';
       const res = await postJSON({ action:'login', password: pwd });
-      if (res && res.ok){
+
+      if (res && res.ok && res.token){
         TOKEN = res.token; localStorage.setItem('cis_tok', TOKEN);
         const info = await fetchJSON(`${API}?action=root&token=${encodeURIComponent(TOKEN)}`);
-        startApp(info);
+        if (info && !info.error) {
+          startApp(info);
+        } else {
+          msg.textContent = 'UNAUTHORIZED / token invalid. Cek izin Web App (Anyone).';
+        }
       } else {
-        $('logmsg').textContent = (res && res.message) || 'Gagal login';
+        msg.textContent = (res && res.message) || 'Login gagal. Cek URL /exec & izin Web App.';
       }
     }
 
@@ -302,7 +325,7 @@
         <div class="meta">Diubah: ${date} · Ukuran: ${size}</div>
         <div class="actions">
           ${f.isFolder
-            ? `<button class="btn pill ghost" onclick="enterFolder('${f.id}','${escapeHtml(f.name)}')">Buka</button>`
+            ? `<button class="btn pill ghost" onclick="enterFolder('${f.id}','${escapeAttr(f.name)}')">Buka</button>`
             : `
               ${/\bimage\b/i.test(f.mimeType) && (f.thumb || f.webViewLink) ? `<button class="btn pill ghost" onclick="openViewerById('${f.id}')">Preview</button>` : ''}
               ${f.webViewLink ? `<a class="btn pill ghost" href="${f.webViewLink}" target="_blank" rel="noreferrer">Lihat</a>` : ''}
