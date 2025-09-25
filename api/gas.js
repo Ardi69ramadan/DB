@@ -1,5 +1,5 @@
 // /api/gas.js
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbw--rDvgWWJuB7hDtFLAXVPl80yW4z4X2F9bPiK39E57fdyFcvE01mvnH_kQYKDBlU8/exec'; // ← GANTI
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbziQJAWFXR2b8ckBQuAIm6ShVufO2fdiyM5kAe22QH5lpLTSpBZ2rsw33Qlvf7pSOCv/exec'; // ← GANTI
 
 export default async function handler(req, res) {
   // CORS (izinkan dari mana saja)
@@ -40,3 +40,4 @@ export default async function handler(req, res) {
     res.status(502).json({ ok: false, message: 'PROXY_ERROR', detail: String(e) });
   }
 }
+
