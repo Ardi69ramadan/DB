@@ -11,7 +11,6 @@
     html,body{height:100%; -webkit-text-size-adjust:100%}
     body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:#fff}
 
-    /* Header: compact & sticky */
     header{
       position:sticky; top:env(safe-area-inset-top,0); z-index:20;
       background:linear-gradient(180deg,rgba(15,20,24,.98),rgba(15,20,24,.75)), var(--bg);
@@ -27,7 +26,6 @@
 
     .wrap{width:100%;margin:0;padding:12px 14px}
 
-    /* chips scrollable */
     .chipsWrap{margin:8px -14px 0}
     .chips{display:flex;gap:8px;overflow-x:auto;padding:0 14px 8px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
     .chips::-webkit-scrollbar{display:none}
@@ -37,7 +35,6 @@
     .crumbs{display:flex;flex-wrap:wrap;gap:6px;color:var(--muted);font-size:12px;margin:10px 0}
     .crumbs a{color:#cfe3f5;text-decoration:none}
 
-    /* grid mobile-first */
     .grid{display:grid;gap:10px;grid-template-columns:1fr}
     @media(min-width:400px){ .grid{grid-template-columns:repeat(2,minmax(0,1fr))} }
     @media(min-width:768px){ .wrap{max-width:860px;margin:0 auto} .grid{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))} }
@@ -52,13 +49,11 @@
     .loadmore{display:block;width:100%;margin:12px 0;padding:12px;border-radius:12px;border:1px solid var(--ring);background:#0c1116;color:#e5eef6}
     @media(max-width:480px){ .actions .btn{flex:1 1 calc(50% - 8px); text-align:center} }
 
-    /* login panel */
     .login{min-height:100dvh;display:grid;place-items:center;padding:20px}
     .panel{width:100%;max-width:420px;background:var(--card);border:1px solid var(--ring);border-radius:18px;padding:16px}
     .note{color:var(--muted);font-size:12px;margin-bottom:8px}
     .err{color:#ffb4a2}
 
-    /* viewer overlay */
     .viewer{position:fixed;inset:0;background:rgba(0,0,0,.88);display:none;z-index:50}
     .viewer-inner{position:absolute;inset:0;display:grid;place-items:center;padding:16px}
     .viewer img{max-width:100%;max-height:70dvh;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.6)}
@@ -67,11 +62,9 @@
     .viewer .nav{position:absolute;top:50%;transform:translateY(-50%);display:flex;justify-content:space-between;width:100%;padding:0 8px}
     .viewer .nav button{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:999px;width:42px;height:42px}
 
-    /* gallery */
     .grid.gallery .card{padding:0;overflow:hidden}
     .thumb{aspect-ratio:4/3;width:100%;object-fit:cover;display:block}
 
-    /* uploader */
     .uploader{background:#0c1116;border:1px dashed #334250;border-radius:14px;padding:12px;margin:12px 0}
     .uploader.drag{background:#101820;border-color:#4b6a82}
     .progress{height:6px;background:#203040;border-radius:999px;overflow:hidden;margin-top:8px}
@@ -153,7 +146,7 @@
 
   <script>
     // ==== KONFIG FRONTEND ====
-    const API = 'https://script.google.com/macros/s/AKfycbxnfYKLdbTso4ipr5XJh1Outp1ytA6l9LP2-KWLeRxbpdLptUz5tmxHtOQv4WyHKh6t/exec'; // URL Web App GAS (akhiran /exec)
+    const API = 'https://script.google.com/macros/s/AKfycbzS4O7cGnIFMdMDvbaQfVj4FovL1hpUtDorMeQWJ74GjAdWD5OOdoL31Kc35b8EsSS7/exec'; // ← GANTI dengan URL /exec dari Code.gs
 
     // ==== STATE ====
     let TOKEN = localStorage.getItem('cis_tok') || null;
@@ -183,19 +176,16 @@
     // === Helpers ===
     function $(id){ return document.getElementById(id); }
     function escapeHtml(s){ return String(s).replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
-    function escapeAttr(s){ return String(s).replace(/'/g,"\\'").replace(/"/g,'&quot;'); } // untuk atribut JS
+    function escapeAttr(s){ return String(s).replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
     function humanSize(n){ const u=['B','KB','MB','GB','TB']; let i=0,v=Number(n||0); while(v>=1024&&i<u.length-1){v/=1024;i++;} return v?`${v.toFixed(1)} ${u[i]}`:'-'; }
 
-    // Versi defensif: parse text → JSON, log bila bukan JSON
     async function fetchJSON(url){
       try {
         const r = await fetch(url,{method:'GET'});
         const txt = await r.text();
         try { return JSON.parse(txt); }
         catch(e){ console.error('GET non-JSON:', txt.slice(0,300)); return null; }
-      } catch (e) {
-        console.error('fetchJSON error:', e); return null;
-      }
+      } catch (e) { console.error('fetchJSON error:', e); return null; }
     }
     async function postJSON(data){
       try {
@@ -203,26 +193,33 @@
         const txt = await r.text();
         try { return JSON.parse(txt); }
         catch(e){ console.error('POST non-JSON:', txt.slice(0,300)); return { ok:false, message:'API_NOT_JSON' }; }
-      } catch (e) {
-        console.error('postJSON error:', e); return { ok:false, message:'NETWORK_ERROR' };
-      }
+      } catch (e) { console.error('postJSON error:', e); return { ok:false, message:'NETWORK_ERROR' }; }
     }
 
-    // === Auth ===
+    // === Auth (POST + fallback GET) ===
     async function doLogin(){
       const pwd = $('pwd').value.trim();
       const msg = $('logmsg');
       msg.textContent = 'Memeriksa…';
-      const res = await postJSON({ action:'login', password: pwd });
+
+      // 1) coba POST
+      let res = await postJSON({ action:'login', password: pwd });
+
+      // 2) fallback GET kalau NETWORK_ERROR
+      if (!res || res.message === 'NETWORK_ERROR') {
+        try {
+          const url = `${API}?action=login&password=${encodeURIComponent(pwd)}`;
+          const r = await fetch(url);
+          const txt = await r.text();
+          try { res = JSON.parse(txt); } catch { res = { ok:false, message:'API_NOT_JSON (GET)' }; }
+        } catch { res = { ok:false, message:'NETWORK_ERROR (GET)' }; }
+      }
 
       if (res && res.ok && res.token){
         TOKEN = res.token; localStorage.setItem('cis_tok', TOKEN);
         const info = await fetchJSON(`${API}?action=root&token=${encodeURIComponent(TOKEN)}`);
-        if (info && !info.error) {
-          startApp(info);
-        } else {
-          msg.textContent = 'UNAUTHORIZED / token invalid. Cek izin Web App (Anyone).';
-        }
+        if (info && !info.error) startApp(info);
+        else msg.textContent = 'UNAUTHORIZED / token invalid. Cek izin Web App (Anyone).';
       } else {
         msg.textContent = (res && res.message) || 'Login gagal. Cek URL /exec & izin Web App.';
       }
@@ -404,5 +401,3 @@
   </script>
 </body>
 </html>
-
-
