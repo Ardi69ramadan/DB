@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"/>
+  <title>Database Cisompet</title>
+  <meta name="theme-color" content="#0f1418"/>
+  <style>
+    :root { --bg:#0f1418; --card:#141a20; --muted:#8b96a3; --ring:#223240; --chip:#1b232b; --accent:#e9dccb; }
+    *{box-sizing:border-box}
+    html,body{height:100%; -webkit-text-size-adjust:100%}
+    body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:#fff}
+
+    /* Header: compact & sticky */
+    header{
+      position:sticky; top:env(safe-area-inset-top,0); z-index:20;
+      background:linear-gradient(180deg,rgba(15,20,24,.98),rgba(15,20,24,.75)), var(--bg);
+      backdrop-filter:saturate(180%) blur(8px);
+      padding:10px 14px; border-bottom:1px solid #162028
+    }
+    .title{font-weight:800;letter-spacing:.3px;font-size:18px;line-height:1.2}
+    .subtitle{color:var(--muted);font-size:12px;margin-top:2px}
+    .row{display:flex;gap:8px;align-items:center;margin-top:10px}
+    .input{flex:1;background:#0b1014;border:1px solid var(--ring);border-radius:12px;padding:10px 12px;color:#e5eef6;outline:none;font-size:14px}
+    .btn{background:#0c1116;border:1px solid var(--ring);color:#e5eef6;padding:10px 12px;border-radius:12px;cursor:pointer;font-size:14px}
+    .btn:active{transform:scale(.98)}
+
+    .wrap{width:100%;margin:0;padding:12px 14px}
+
+    /* chips scrollable */
+    .chipsWrap{margin:8px -14px 0}
+    .chips{display:flex;gap:8px;overflow-x:auto;padding:0 14px 8px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    .chips::-webkit-scrollbar{display:none}
+    .chip{background:var(--chip);border:1px solid var(--ring);padding:8px 12px;border-radius:999px;font-size:12px;color:#cfe3f5;white-space:nowrap;user-select:none;flex:0 0 auto}
+    .chip.active{background:#203040}
+
+    .crumbs{display:flex;flex-wrap:wrap;gap:6px;color:var(--muted);font-size:12px;margin:10px 0}
+    .crumbs a{color:#cfe3f5;text-decoration:none}
+
+    /* grid mobile-first */
+    .grid{display:grid;gap:10px;grid-template-columns:1fr}
+    @media(min-width:400px){ .grid{grid-template-columns:repeat(2,minmax(0,1fr))} }
+    @media(min-width:768px){ .wrap{max-width:860px;margin:0 auto} .grid{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))} }
+
+    .card{background:var(--card);border:1px solid var(--ring);border-radius:14px;padding:12px;box-shadow:0 12px 30px rgba(0,0,0,.22)}
+    .name{font-weight:700;margin:6px 0 4px;font-size:14px}
+    .meta{font-size:12px;color:var(--muted)}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .pill{border-radius:12px;padding:8px 10px}
+    .ghost{background:transparent;border:1px solid var(--ring);color:#d9e6f2}
+    .solid{background:#e9dccb;color:#0b0f12;border:1px solid #b9a98c}
+    .loadmore{display:block;width:100%;margin:12px 0;padding:12px;border-radius:12px;border:1px solid var(--ring);background:#0c1116;color:#e5eef6}
+    @media(max-width:480px){ .actions .btn{flex:1 1 calc(50% - 8px); text-align:center} }
+
+    /* login panel */
+    .login{min-height:100dvh;display:grid;place-items:center;padding:20px}
+    .panel{width:100%;max-width:420px;background:var(--card);border:1px solid var(--ring);border-radius:18px;padding:16px}
+    .note{color:var(--muted);font-size:12px;margin-bottom:8px}
+    .err{color:#ffb4a2}
+
+    /* viewer overlay */
+    .viewer{position:fixed;inset:0;background:rgba(0,0,0,.88);display:none;z-index:50}
+    .viewer-inner{position:absolute;inset:0;display:grid;place-items:center;padding:16px}
+    .viewer img{max-width:100%;max-height:70dvh;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.6)}
+    .viewer .topbar{position:absolute;top:8px;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:8px 12px;color:#fff;font-size:13px}
+    .viewer .btnx{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:10px;padding:8px 10px}
+    .viewer .nav{position:absolute;top:50%;transform:translateY(-50%);display:flex;justify-content:space-between;width:100%;padding:0 8px}
+    .viewer .nav button{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:999px;width:42px;height:42px}
+
+    /* gallery */
+    .grid.gallery .card{padding:0;overflow:hidden}
+    .thumb{aspect-ratio:4/3;width:100%;object-fit:cover;display:block}
+
+    /* uploader */
+    .uploader{background:#0c1116;border:1px dashed #334250;border-radius:14px;padding:12px;margin:12px 0}
+    .uploader.drag{background:#101820;border-color:#4b6a82}
+    .progress{height:6px;background:#203040;border-radius:999px;overflow:hidden;margin-top:8px}
+    .bar{height:100%;width:0;background:#e9dccb}
+  </style>
+</head>
+<body>
+  <!-- LOGIN -->
+  <div id="login" class="login">
+    <div class="panel">
+      <div class="title" style="font-size:22px;font-weight:800">Database Cisompet</div>
+      <div class="note">Masuk pakai password akses.</div>
+      <input id="pwd" type="password" class="input" placeholder="Password" autocomplete="current-password"/>
+      <div class="row" style="margin-top:10px">
+        <button class="btn solid" onclick="doLogin()">Masuk</button>
+        <div id="logmsg" class="note err" style="margin-left:auto"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div id="app" style="display:none">
+    <header>
+      <div class="title">Database Cisompet</div>
+      <div class="subtitle">Akses cepat berkas Google Drive</div>
+      <div class="row">
+        <input id="q" class="input" placeholder="Cari nama file… (mis. 'SPPD', 'Foto')"/>
+        <button class="btn" onclick="search()">Cari</button>
+      </div>
+      <div class="chipsWrap">
+        <div class="chips">
+          <div class="chip active" data-type="all" onclick="setType(this)">Semua</div>
+          <div class="chip" data-type="pdf" onclick="setType(this)">PDF</div>
+          <div class="chip" data-type="jpg" onclick="setType(this)">JPG/PNG</div>
+          <div class="chip" data-type="doc" onclick="setType(this)">Docs</div>
+          <div class="chip" id="galeriChip" data-type="gallery" onclick="toggleGallery()">Galeri</div>
+        </div>
+      </div>
+    </header>
+
+    <div class="wrap">
+      <div class="crumbs" id="crumbs"></div>
+
+      <!-- Uploader -->
+      <div id="uploader" class="uploader">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input id="fileInput" type="file" multiple class="btn" style="padding:8px" />
+          <button class="btn solid" onclick="startUpload()">Upload</button>
+          <div class="note">Drag & drop file ke kotak ini.</div>
+        </div>
+        <div class="progress" style="display:none" id="progWrap"><div class="bar" id="progBar"></div></div>
+        <div id="upStatus" class="note" style="margin-top:6px;color:#cfe3f5"></div>
+      </div>
+
+      <div id="grid" class="grid"></div>
+      <div id="sentinel" style="height:1px"></div>
+      <button id="more" class="loadmore" style="display:none" onclick="loadMore()">Muat lagi</button>
+    </div>
+  </div>
+
+  <!-- Viewer -->
+  <div id="viewer" class="viewer" onclick="closeViewer(event)">
+    <div class="viewer-inner">
+      <div class="topbar">
+        <div id="viewerName" class="small"></div>
+        <div style="display:flex;gap:8px">
+          <a id="viewerView" class="btnx" target="_blank" rel="noreferrer">Lihat</a>
+          <a id="viewerDown" class="btnx" target="_blank" rel="noreferrer">Unduh</a>
+          <button class="btnx" onclick="hideViewer()">Tutup</button>
+        </div>
+      </div>
+      <img id="viewerImg" src="" alt="preview"/>
+      <div class="nav">
+        <button onclick="prevImg(event)">←</button>
+        <button onclick="nextImg(event)">→</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==== KONFIG FRONTEND ====
+    const API = 'https://script.google.com/macros/s/AKfycby_pjj-lYS8AlfBa8qgrPuzDZAM3z_PV42NMoTIBPJ71d1ImcDgPgYODn_e4p52goc/exec'; // ← GANTI: URL Web App GAS (akhiran /exec)
+
+    // ==== STATE ====
+    let TOKEN = localStorage.getItem('cis_tok') || null;
+    let ROOT = null;
+    let stack = [];
+    let nextPageToken = null;
+    let lastQuery = '';
+    let lastType = 'all';
+    let loading = false;
+
+    // gallery
+    let galleryMode = false;
+    let currentImages = [];
+    let currentIndex = 0;
+    let touchStartX = 0;
+
+    // INIT
+    (async function(){
+      if (TOKEN) {
+        const ok = await fetchJSON(`${API}?action=root&token=${encodeURIComponent(TOKEN)}`);
+        if (ok && !ok.error) { startApp(ok); return; }
+        localStorage.removeItem('cis_tok'); TOKEN = null;
+      }
+      document.getElementById('login').style.display='grid';
+    })();
+
+    // === Helpers ===
+    function $(id){ return document.getElementById(id); }
+    function escapeHtml(s){ return String(s).replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+    function humanSize(n){ const u=['B','KB','MB','GB','TB']; let i=0,v=Number(n||0); while(v>=1024&&i<u.length-1){v/=1024;i++;} return v?`${v.toFixed(1)} ${u[i]}`:'-'; }
+    async function fetchJSON(url){ const r = await fetch(url,{method:'GET'}); return r.ok ? r.json() : null; }
+    async function postJSON(data){
+      // gunakan text/plain supaya TIDAK preflight
+      const r = await fetch(API, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify(data) });
+      return r.ok ? r.json() : null;
+    }
+
+    // === Auth ===
+    async function doLogin(){
+      const pwd = $('pwd').value.trim();
+      $('logmsg').textContent = 'Memeriksa…';
+      const res = await postJSON({ action:'login', password: pwd });
+      if (res && res.ok){
+        TOKEN = res.token; localStorage.setItem('cis_tok', TOKEN);
+        const info = await fetchJSON(`${API}?action=root&token=${encodeURIComponent(TOKEN)}`);
+        startApp(info);
+      } else {
+        $('logmsg').textContent = (res && res.message) || 'Gagal login';
+      }
+    }
+
+    function startApp(info){
+      ROOT = info; stack = [{ id:info.id, name:info.name }];
+      $('login').style.display='none';
+      $('app').style.display='block';
+      renderCrumbs();
+      setupInfiniteScroll();
+      setupUploader();
+      reload();
+    }
+
+    // === Browsing ===
+    function renderCrumbs(){
+      const c = $('crumbs'); c.innerHTML = '';
+      stack.forEach((node,i)=>{
+        const sep = document.createTextNode(i?' / ':'');
+        if(i) c.appendChild(sep);
+        const a = document.createElement('a');
+        a.textContent = i===0 ? 'Beranda' : node.name; a.href='#';
+        a.onclick = (e)=>{ e.preventDefault(); stack = stack.slice(0,i+1); renderCrumbs(); reload(); };
+        c.appendChild(a);
+      });
+    }
+
+    function setType(el){
+      document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
+      el.classList.add('active');
+      lastType = el.dataset.type;
+      reload();
+    }
+    function toggleGallery(){
+      galleryMode = !galleryMode;
+      document.getElementById('galeriChip').classList.toggle('active', galleryMode);
+      document.getElementById('grid').classList.toggle('gallery', galleryMode);
+      reload();
+    }
+    function search(){ lastQuery = $('q').value.trim(); reload(); }
+    function reload(){ nextPageToken = null; currentImages = []; load(false); }
+    function loadMore(){ load(true); }
+
+    async function load(append){
+      if (loading) return; loading = true;
+      const folderId = stack[stack.length-1].id;
+      const url = `${API}?action=list&token=${encodeURIComponent(TOKEN)}&folderId=${encodeURIComponent(folderId)}&q=${encodeURIComponent(lastQuery)}&pageToken=${encodeURIComponent(nextPageToken||'')}&pageSize=50`;
+      const res = await fetchJSON(url);
+      loading = false;
+      if (!res || res.error){ alert('Sesi habis. Login ulang.'); localStorage.removeItem('cis_tok'); location.reload(); return; }
+
+      const grid = $('grid');
+      if(!append) grid.innerHTML = '';
+
+      let items = res.items || [];
+      // filter chips
+      items = items.filter(f=>{
+        if (lastType==='all' || lastType==='gallery') return true;
+        const mt = (f.mimeType||'').toLowerCase();
+        const nm = (f.name||'').toLowerCase();
+        if (lastType==='pdf') return mt.includes('pdf') || nm.endsWith('.pdf');
+        if (lastType==='jpg') return mt.includes('image') || /\.(jpg|jpeg|png|webp)$/i.test(nm);
+        if (lastType==='doc') return /google-apps\.document|msword|officedocument\.word/.test(mt) || /\.(doc|docx)$/i.test(nm);
+        return true;
+      });
+      if (galleryMode) items = items.filter(f => /^image\//i.test(f.mimeType||'') && (f.thumb || f.webViewLink));
+
+      items.forEach(f=>{
+        addCard(f);
+        if (/^image\//i.test(f.mimeType||'')) {
+          const src = f.thumb ? f.thumb.replace(/=s\d+/, '=s2000') : (f.webViewLink || '');
+          currentImages.push({ id:f.id, name:f.name, src, view:f.webViewLink||'#', down:f.webContentLink||'#' });
+        }
+      });
+
+      nextPageToken = res.nextPageToken || null;
+      $('more').style.display = nextPageToken ? 'block' : 'none';
+    }
+
+    function addCard(f){
+      const grid = $('grid');
+      const el = document.createElement('div'); el.className='card';
+
+      if (galleryMode && /^image\//i.test(f.mimeType||'')) {
+        const src = f.thumb ? f.thumb.replace(/=s\d+/, '=s600') : '';
+        el.innerHTML = `<img class="thumb" src="${src}" alt="" onclick="openViewerById('${f.id}')">`;
+        grid.appendChild(el);
+        return;
+      }
+
+      const date = f.modifiedTime ? new Date(f.modifiedTime).toLocaleString() : '-';
+      const size = humanSize(f.size);
+      const icon = f.isFolder ? '📁' : (/\bpdf\b/i.test(f.mimeType) ? '📄' : (/\bimage\b/i.test(f.mimeType) ? '🖼️' : '📘'));
+      const canExport = /google-apps\.(document|presentation|spreadsheet)/.test(f.mimeType||'');
+
+      el.innerHTML = `
+        <div class="meta">${icon} ${f.isFolder ? 'Folder' : f.mimeType}</div>
+        <div class="name">${escapeHtml(f.name)}</div>
+        <div class="meta">Diubah: ${date} · Ukuran: ${size}</div>
+        <div class="actions">
+          ${f.isFolder
+            ? `<button class="btn pill ghost" onclick="enterFolder('${f.id}','${escapeHtml(f.name)}')">Buka</button>`
+            : `
+              ${/\bimage\b/i.test(f.mimeType) && (f.thumb || f.webViewLink) ? `<button class="btn pill ghost" onclick="openViewerById('${f.id}')">Preview</button>` : ''}
+              ${f.webViewLink ? `<a class="btn pill ghost" href="${f.webViewLink}" target="_blank" rel="noreferrer">Lihat</a>` : ''}
+              ${f.webContentLink ? `<a class="btn pill solid" href="${f.webContentLink}" target="_blank" rel="noreferrer">Unduh</a>` : ''}
+              ${canExport ? `<a class="btn pill" href="${API}?action=exportPdf&id=${encodeURIComponent(f.id)}" target="_blank" rel="noreferrer">Export PDF</a>` : ''}
+            `}
+        </div>`;
+      grid.appendChild(el);
+    }
+
+    function enterFolder(id, name){ stack.push({id, name}); renderCrumbs(); reload(); }
+
+    // === Infinite scroll ===
+    function setupInfiniteScroll(){
+      const sentinel = $('sentinel');
+      const io = new IntersectionObserver((entries)=>{
+        entries.forEach(entry=>{ if (entry.isIntersecting && nextPageToken) load(true); });
+      }, { rootMargin:'600px 0px' });
+      io.observe(sentinel);
+    }
+
+    // === Viewer ===
+    function openViewerById(id){ const i = currentImages.findIndex(x=>x.id===id); if(i>=0) openViewer(i); }
+    function openViewer(i){
+      currentIndex = i; const v = currentImages[currentIndex];
+      $('viewerImg').src = v.src; $('viewerName').textContent = v.name;
+      $('viewerView').href = v.view || '#'; $('viewerDown').href = v.down || '#';
+      $('viewer').style.display='block';
+    }
+    function hideViewer(){ $('viewer').style.display='none'; }
+    function closeViewer(e){ if (e.target.id === 'viewer') hideViewer(); }
+    function prevImg(e){ e && e.stopPropagation(); if (!currentImages.length) return; currentIndex = (currentIndex - 1 + currentImages.length) % currentImages.length; openViewer(currentIndex); }
+    function nextImg(e){ e && e.stopPropagation(); if (!currentImages.length) return; currentIndex = (currentIndex + 1) % currentImages.length; openViewer(currentIndex); }
+    document.addEventListener('keydown', e=>{
+      if ($('viewer').style.display === 'block') {
+        if (e.key === 'ArrowLeft') prevImg();
+        if (e.key === 'ArrowRight') nextImg();
+        if (e.key === 'Escape') hideViewer();
+      }
+    });
+    const viewerEl = $('viewer');
+    viewerEl.addEventListener('touchstart', e=>{ touchStartX = e.touches[0].clientX; }, {passive:true});
+    viewerEl.addEventListener('touchend', e=>{
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      if (Math.abs(dx) > 50){ if (dx > 0) prevImg(); else nextImg(); }
+    }, {passive:true});
+
+    // === Upload (base64) ===
+    function setupUploader(){
+      const box = $('uploader'); const input = $('fileInput');
+      box.addEventListener('dragover', e=>{ e.preventDefault(); box.classList.add('drag'); });
+      box.addEventListener('dragleave', e=>{ box.classList.remove('drag'); });
+      box.addEventListener('drop', e=>{
+        e.preventDefault(); box.classList.remove('drag');
+        if (e.dataTransfer.files && e.dataTransfer.files.length){ input.files = e.dataTransfer.files; }
+      });
+    }
+    async function startUpload(){
+      const input = $('fileInput'); const files = input.files;
+      if (!files || !files.length){ alert('Pilih file dulu.'); return; }
+      const folderId = stack[stack.length-1].id;
+      const pw = $('progWrap'); const bar = $('progBar'); const st = $('upStatus');
+      pw.style.display='block'; bar.style.width='0%'; st.textContent='Menyiapkan…';
+
+      let done = 0;
+      for (const f of files){
+        st.textContent = `Mengunggah: ${f.name}`;
+        const base64 = await fileToBase64(f);
+        const res = await postJSON({ action:'upload', token:TOKEN, folderId, name:f.name, mimeType:f.type || 'application/octet-stream', base64 });
+        done++; bar.style.width = Math.round((done/files.length)*100) + '%';
+        if (!res || !res.ok) alert('Gagal upload: '+ f.name);
+      }
+      st.textContent = 'Selesai.'; setTimeout(()=>{ pw.style.display='none'; st.textContent=''; input.value=''; reload(); }, 600);
+    }
+    function fileToBase64(file){ return new Promise((resolve,reject)=>{ const r=new FileReader(); r.onload=()=>{ const s=String(r.result); resolve(s.split(',')[1]||s); }; r.onerror=()=>reject(r.error); r.readAsDataURL(file); }); }
+  </script>
+</body>
+</html>
